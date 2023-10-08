@@ -14,7 +14,7 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 - **Anywhere:** The game offers three distinct modes:
   1. **Trust Mode:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
   
-  ![Trust Mode Example]((https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif))
+  ((https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif))
 
   2. **Limited Mode:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
   
