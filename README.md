@@ -37,7 +37,7 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 
 - The game takes place within a single scene. After one player wins, you have the option to choose the next game mode to play.
 
-![Game Mode Selection Video](link_to_video_for_game_mode_selection)
+![Game Mode Selection Video](https://github.com/stupakzm/Backgammon/blob/main/readme/winScreen.gif)
 
 - 3D models used in this project are obtained from free sources.
 
