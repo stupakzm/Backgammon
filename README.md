@@ -12,15 +12,15 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 - **Anytime:** I'm currently working on optimizing the game for various screen resolutions and preparing a project build.
 
 - **Anywhere:** The game offers three distinct modes:
-  1. **Trust Mode:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
+  1. **FreeAspect:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
   
    ![](https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif)
 
-  2. **Limited Mode:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
+  2. **Fixed 6:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
   
   ![Limited Mode Example](link_to_gif_for_limited_mode)
 
-  3. **Dice Rules Mode:** This mode follows the official rules for dice setting, allowing players to throw their own dice. It's included for those who prefer manual dice rolling over machine-generated ones, although there's also an option for automated dice generation.
+  3. **Set Cubes:** This mode follows the official rules for dice setting, allowing players to throw their own dice. It's included for those who prefer manual dice rolling over machine-generated ones, although there's also an option for automated dice generation.
 
   Here's how the dice selection works:
   ![Dice Selection Example](link_to_gif_for_dice_selection)
