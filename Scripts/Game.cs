@@ -519,13 +519,6 @@ public class Game : MonoBehaviour {
     }
 
     public List<PositionBase> GetPosiblePositionsToMoveChipLast() {
-        // List<PositionHandle> listToReturn = new List<PositionHandle>();//creating new list that`ll transfer to PositoinHandle.cs in listening event
-
-        //if (gameRules == GameRules.SetCubes) {
-        //create new methode to return pos with set cubes
-        // return listToReturn;
-        //}
-        //GetPosiblePositionsToMoveChip();
         return listToReturn;
 
     }
@@ -543,7 +536,6 @@ public class Game : MonoBehaviour {
     private void GetPosiblePositionsToMoveChipSetCubes(int cube1, int cube2) {
         listToReturn = new List<PositionBase>();
         bool isPareCubes = cube1 == cube2;
-        //just control if it`s first move, than move it without player
         List<int> posibleIndexes = new List<int>();
         int currentPositionIndex = PlayerToMove == Player.FirstPlayer ? positionWhiteReverse.IndexOf(currentChip.GetCurrentPosition()) : positionBlackReverse.IndexOf(currentChip.GetCurrentPosition());
 
@@ -584,12 +576,8 @@ public class Game : MonoBehaviour {
             }
         }
         else {
-
-
-
             int variationIndexCube1 = (currentPositionIndex - cube1) < 0 ? 0 : currentPositionIndex - cube1;
             int variationIndexCube2 = (currentPositionIndex - cube2) < 0 ? 0 : currentPositionIndex - cube2;
-
 
             if (cube1 == 0) {
                 if (cube2 == 0) {
@@ -598,28 +586,30 @@ public class Game : MonoBehaviour {
                 }
                 else {//cube1 = 0 & cube2 != 0
                     if (PlayerToMove == Player.FirstPlayer) {
-                        if (positionWhiteReverse[variationIndexCube2].player != Player.SecondPlayer)
+                        if (positionWhiteReverse[variationIndexCube2].player != Player.SecondPlayer && variationIndexCube2 > 0)
                             posibleIndexes.Add(variationIndexCube2);
                     }
                     else {
-                        if (positionBlackReverse[variationIndexCube2].player != Player.FirstPlayer)
+                        if (positionBlackReverse[variationIndexCube2].player != Player.FirstPlayer && variationIndexCube2 > 0)
                             posibleIndexes.Add(variationIndexCube2);
                     }
                 }
             }
             else {
                 if (cube2 == 0) {// cube1 != 0 & cube2 = 0
-                    if (PlayerToMove == Player.FirstPlayer) {
-                        if (positionWhiteReverse[variationIndexCube1].player != Player.SecondPlayer)
+                     if (PlayerToMove == Player.FirstPlayer) {
+                        if (positionWhiteReverse[variationIndexCube1].player != Player.SecondPlayer && variationIndexCube1 > 0)
                             posibleIndexes.Add(variationIndexCube1);
                     }
                     else {
-                        if (positionBlackReverse[variationIndexCube1].player != Player.FirstPlayer)
+                        if (positionBlackReverse[variationIndexCube1].player != Player.FirstPlayer && variationIndexCube1 > 0)
                             posibleIndexes.Add(variationIndexCube1);
                     }
                 }
                 else {// cube1 != 0 & cube2 != 0
+                    if(variationIndexCube1 >0)
                     posibleIndexes.Add(variationIndexCube1);
+                    if(variationIndexCube2 >0)
                     posibleIndexes.Add(variationIndexCube2);
                     if (PlayerToMove == Player.FirstPlayer) {
                         if (positionWhiteReverse[variationIndexCube1].player != Player.SecondPlayer)
