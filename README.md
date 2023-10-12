@@ -14,30 +14,32 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 - **Anywhere:** The game offers three distinct modes:
   1. **FreeAspect:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
   
-   ![](https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif)
+   ![Free Aspect Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif)
 
   2. **Fixed 6:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
   
-  ![Limited Mode Example](link_to_gif_for_limited_mode)
+  ![Fixed 6 Game Mode]([link_to_gif_for_limited_mode](https://github.com/stupakzm/Backgammon/blob/main/readme/fixedSix.gif)
 
   3. **Set Cubes:** This mode follows the official rules for dice setting, allowing players to throw their own dice. It's included for those who prefer manual dice rolling over machine-generated ones, although there's also an option for automated dice generation.
 
+![Set Cubes Game Mode]([link_to_gif_for_limited_mode](https://github.com/stupakzm/Backgammon/blob/main/readme/setCubes.gif)
+
   Here's how the dice selection works:
-  ![Dice Selection Example](link_to_gif_for_dice_selection)
+  ![Dice Selection Example](https://github.com/stupakzm/Backgammon/blob/main/readme/diceSelection.gif)
 
 #Game Rules
-- When both dice show the same value, you get four moves with those dice.
+- When both dice show the same value, you get four moveswith those dice.
 - If a player can't make a move, the game proceeds to the other player's turn.
 - You can only remove one piece from the starting position.
 - There's an exception for the first move and rolling double 6's, where you can move two pieces to the sixth position.
 - "Jumping" over an opponent's sixth position is not allowed.
 - You cannot close all final positions, which serve as entry points to the home board.
 
-![Home Board Movement Example](link_to_image_for_home_board_movement)
+![Home Board Movement Example](https://github.com/stupakzm/Backgammon/blob/main/readme/homeMovement.gif)
 
 - The game takes place within a single scene. After one player wins, you have the option to choose the next game mode to play.
 
-![Game Mode Selection Video](https://github.com/stupakzm/Backgammon/blob/main/readme/winScreen.gif)
+![Win Screen](https://github.com/stupakzm/Backgammon/blob/main/readme/winScreen.gif)
 
 - 3D models used in this project are obtained from free sources.
 
