@@ -18,11 +18,11 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 
   2. **Fixed 6:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
   
-  ![Fixed 6 Game Mode]([link_to_gif_for_limited_mode](https://github.com/stupakzm/Backgammon/blob/main/readme/fixedSix.gif)
+  ![Fixed 6 Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/fixedSix.gif)
 
   3. **Set Cubes:** This mode follows the official rules for dice setting, allowing players to throw their own dice. It's included for those who prefer manual dice rolling over machine-generated ones, although there's also an option for automated dice generation.
 
-![Set Cubes Game Mode]([link_to_gif_for_limited_mode](https://github.com/stupakzm/Backgammon/blob/main/readme/setCubes.gif)
+![Set Cubes Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/setCubes.gif)
 
   Here's how the dice selection works:
   ![Dice Selection Example](https://github.com/stupakzm/Backgammon/blob/main/readme/diceSelection.gif)
