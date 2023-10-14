@@ -1,4 +1,4 @@
-# Nardi Game Project
+# Backgammon Game Project
 
 
 This repository contains the code for my upcoming Nardi (Backgammon) game.
