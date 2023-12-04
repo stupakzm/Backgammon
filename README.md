@@ -44,7 +44,7 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 - 3D models used in this project are obtained from free sources.
 
 #Future Plans
-- Future enhancements include adding more features such as customizable settings, menus, sound effects, game-saving functionality, and the ability to undo moves, among others.
+- Future enhancements include adding more features such as customizable settings, menu - in progress, sound effects - done(BG music, chip move sound), game-saving functionality, and the ability to undo moves - done, among others.
 
 #Contact
 - If you have any questions or suggestions, please don't hesitate to reach out to me via email.
