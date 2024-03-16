@@ -7,33 +7,28 @@ This repository contains the code for my upcoming Nardi (Backgammon) game.
 #Project Objective
 The primary aim of this project is to offer a versatile Nardi gaming experience that can be enjoyed anytime and anywhere.
 
-
 #Features
-- **Anytime:** I'm currently working on optimizing the game for various screen resolutions and preparing a project build.
-
-- **Anywhere:** The game offers three distinct modes:
+- The game offers three possible modes (the functioning of which can be viewed in the game itself, it is implemented using Coroutine and has a short description):
   1. **FreeAspect:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
   
-   ![Free Aspect Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/freeAspect.gif)
-
   2. **Fixed 6:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
-  
-  ![Fixed 6 Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/fixedSix.gif)
 
   3. **Set Cubes:** This mode follows the official rules for dice setting, allowing players to throw their own dice. It's included for those who prefer manual dice rolling over machine-generated ones, although there's also an option for automated dice generation.
 
-![Set Cubes Game Mode](https://github.com/stupakzm/Backgammon/blob/main/readme/setCubes.gif)
+- The game has background music and sounds of chip movement and dice rolling. 
+There are also settings with reset functions, the main menu, music volume control, turning off the generator for Fixed6 and FreeAspect modes, and automatic generation for Set Cubes mode. and also shows how many steps are left to win for both players.
 
-  Here's how the dice selection works:
-  ![Dice Selection Example](https://github.com/stupakzm/Backgammon/blob/main/readme/diceSelection.gif)
-
-#Game Rules
-- When both dice show the same value, you get four moveswith those dice.
-- If a player can't make a move, the game proceeds to the other player's turn.
-- You can only remove one piece from the starting position.
-- There's an exception for the first move and rolling double 6's, where you can move two pieces to the sixth position.
-- "Jumping" over an opponent's sixth position is not allowed.
-- You cannot close all final positions, which serve as entry points to the home board.
+#Game Rules - can be viewed both from the main menu and from the settings in the game.
+• "A player cannot move a checker to a point that is already occupied by opponent’s checkers."
+• "A player cannot move a checker to an invalid point. For example, if a player rolls a 5 and a 3, they cannot move one checker 8 points. Instead, they must move checker 5 points and checker 3 points."
+• "A player can only move one checker from the 'head' (starting position) per turn."
+• "If a player rolls a pair of dice, for example, 3:3, they need to move 3 points four times."
+• "Exception for a 6:6 pair at the first move: they need to move 2 checkers from the 'head' to 6 positions."
+• "You can move the checkers 'home' (final section) only after all the checkers are in positions from which you can move 'home' in one move."
+• "If a player can play a roll, they must do so even if it puts them at a disadvantage."
+• "If a player cannot make a move due to position blocking, the move goes to the opponent."
+• "You can't block 6 positions in a row if there are no opponent's checkers after them."
+• "A player wins when they are the first to move all the checkers 'home'."
 
 ![Home Board Movement Example](https://github.com/stupakzm/Backgammon/blob/main/readme/homeMovement.gif)
 
@@ -41,13 +36,6 @@ The primary aim of this project is to offer a versatile Nardi gaming experience 
 
 ![Win Screen](https://github.com/stupakzm/Backgammon/blob/main/readme/winScreen.gif)
 
-- 3D models used in this project are obtained from free sources.
 
 #Future Plans
-- Future enhancements include adding more features such as customizable settings, menu - in progress, sound effects - done(BG music, chip move sound), game-saving functionality, and the ability to undo moves - done, among others.
-
-#Contact
-- If you have any questions or suggestions, please don't hesitate to reach out to me via email.
-
-Best regards,
-Zakhar
+- Future enhancements include adding play mode vs machine and ability to play with some one on 2 devices via bluetooth or WiFi.
