@@ -1,15 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System;
-using UnityEditor;
 using TMPro;
-using UnityEngine.UI;
-using UnityEngine.Playables;
-using System.ComponentModel.Design;
-using System.Reflection;
-using System.Linq;
+using System.Runtime.InteropServices;
 
 public class Game : MonoBehaviour {
 
@@ -29,11 +23,12 @@ public class Game : MonoBehaviour {
     [SerializeField] private CubeSelected CubeVisual2;
     [SerializeField] private Generator Generator;
     [SerializeField] private Transform ChipsParent;
+    [SerializeField] private BotController BotController;
 
     private bool isEnableCubeVisuals = true;//using in method DisableCubeVisuals to make cubes transparent
     private int previousPositionIndex;
     private int IllegalPositionIndexForWhite;//need to simplify barrier rule while checking whether there are any possible moves after the move is made (method:IsAllChipsCanNotMakeMoveInSetCubes)
-    private int IllegalPositionIndexForBlack;//not useing it atm
+    private int IllegalPositionIndexForBlack;
     //private int currentPositionIndex;
     private int pareIndex;//shows how much moves left if pare cubes
     private bool tookFromHead;//to control the number of chips taken from the head
@@ -41,6 +36,7 @@ public class Game : MonoBehaviour {
     private bool UndoButtonDisabled;
     private bool SettingsButtonDisabled;
     public bool isSimulationOn;
+    private bool gameWithBot;
 
     private PositionBase startPosWhite;
     private PositionBase startPosBlack;
@@ -58,7 +54,7 @@ public class Game : MonoBehaviour {
     private PositionHandle previousPosition;//added for future modifications like undo
 
     private Stack<GameSequence> gameSequence;
-    private int chipsCount = 15;
+    private const int chipsCount = 15;
     private GameRules gameRules;
     private Player PlayerToMove = (Player)1;
     private int cubeFirst;
@@ -215,6 +211,7 @@ public class Game : MonoBehaviour {
             UndoButton.SetActive(true);
         }
         currentChip = null;
+        //Testing();
     }
 
     private void MadeMoveCube1(int currentPositionIndex, int cube1) {
@@ -234,6 +231,7 @@ public class Game : MonoBehaviour {
     }
 
     private void MadeMoveInSetCubes(int currentPositionIndex) {
+        movesMade++;
         int variationBetweenIndexes = previousPositionIndex - currentPositionIndex;
 
         if (variationBetweenIndexes == (cubeFirst + cubeLast)) {
@@ -262,11 +260,12 @@ public class Game : MonoBehaviour {
     }
 
     private void MadeMoveInSetCubesHome(int currentPositionIndex) {//method when chip moved to home. called in ButtonHome()
+        movesMade++;
         if (currentPositionIndex == cubeFirst) {
             MadeMoveCube1(currentPositionIndex, cubeFirst);
             return;
         }
-        
+
         //To deal with the fact that the dice can be larger than the index I used in the last position, I added three additional bools
         bool firstLessThanSecond = cubeFirst < cubeLast;
         bool firstLessThanIndex = currentPositionIndex > cubeFirst;
@@ -293,7 +292,6 @@ public class Game : MonoBehaviour {
             MadeMoveCube1(currentPositionIndex, cubeFirst);
             return;
         }
-
     }
 
     private void MadeMoveInSetCubesPare(int currentPositionIndex, bool isLastPos) {
@@ -334,12 +332,12 @@ public class Game : MonoBehaviour {
                 tookFromHead = true;
             }
         }
-
+        movesMade++;
         CheckingForChangePlayerToMove(cubeFirst == cubeLast);
     }
 
     private void MadeMoveInSetCubesPareHome(int index) {
-        //Debug.Log("MadeMoveInSetCubesPareHome");
+        movesMade++;
         int curentChipIndex = currentChip.GetPlayerState() == Player.FirstPlayer ? chipsWhite.IndexOf(currentChip) : chipsBlack.IndexOf(currentChip);
         int currentPositionIndex = PlayerToMove == Player.FirstPlayer ? positionWhiteReverse.IndexOf(currentChip.GetCurrentPosition()) : positionBlackReverse.IndexOf(currentChip.GetCurrentPosition());
         if (index == cubeFirst) {
@@ -387,6 +385,14 @@ public class Game : MonoBehaviour {
 
     private void ChangePlayerToMove() {
         PlayerToMove = PlayerToMove == 0 ? (Player)1 : (Player)0;
+        if (gameWithBot && PlayerToMove == BotController.GetPlayerState()) {
+            Generator.OnButtonClick();
+            UndoButton.SetActive(false);
+            UndoButtonDisabled = false;
+            SettingsButtonDisabled = false;
+            tookFromHead = false;
+            return;
+        }
         if (GeneratorOnlyInSetCubes) {
             Generator.OnButtonClick();
         }
@@ -399,7 +405,6 @@ public class Game : MonoBehaviour {
         UndoButtonDisabled = false;
         SettingsButtonDisabled = false;
         tookFromHead = false;
-        movesMade++;
     }
 
     public void ButtonHome() {
@@ -459,6 +464,7 @@ public class Game : MonoBehaviour {
     }
 
     public void StartLongGameFreeAspect() {//Button
+        gameWithBot = false;
         gameRules = GameRules.FreeAspect;
         RestartGameHelper();
         ChipButtonsEnableBoth();
@@ -472,6 +478,7 @@ public class Game : MonoBehaviour {
     }
 
     public void StartGameFixedSix() {//Button
+        gameWithBot = false;
         gameRules = GameRules.FixedSix;
         RestartGameHelper();
         ChipButtonsEnableBoth();
@@ -485,13 +492,24 @@ public class Game : MonoBehaviour {
     }
 
     public void StartGameSetCubes() {//Button
+        gameWithBot = false;
         RestartGameHelper();
         gameRules = GameRules.SetCubes;
         PlayerToMove = Player.SecondPlayer;
         ChangePlayerToMove();//banner is activated here
         Generator.SetCubesPosition();
         movesMade = 0;
-        //Testing();
+    }
+
+    public void StartGameVsBot() {
+        gameWithBot = true;
+        RestartGameHelper();
+        gameRules = GameRules.SetCubes;
+        PlayerToMove = Player.SecondPlayer;
+        ChangePlayerToMove();
+        Generator.SetCubesPosition();
+        movesMade = 0;
+        BotController.SetChips(chipsBlack);
     }
 
     private void RestartGameHelper() {
@@ -1105,11 +1123,66 @@ public class Game : MonoBehaviour {
             positionBlackReverse[0].VisualizePosition();
     }
 
+    private void VisualizeCubesAfterUndo(int cube1, int cube2) {
+        cubeFirst = cube1;
+        if (cubeFirst >= 1 && cubeFirst <= 6) {
+            CubeVisual1.SetState((Cube)cubeFirst);
+            CubeVisual1.gameObject.SetActive(true);
+        }
+        else {
+            CubeVisual1.gameObject.SetActive(false);
+        }
+        cubeLast = cube2;
+        if (cubeLast >= 1 && cubeLast <= 6) {
+            CubeVisual2.SetState((Cube)cubeLast);
+            CubeVisual2.gameObject.SetActive(true);
+        }
+        else {
+            CubeVisual2.gameObject.SetActive(false);
+        }
+    }
+
     public void ButtonUndo() {
         if (!UndoButtonDisabled) {
             ButtonDeseletChip();
 
             GameSequence previousMove = gameSequence.Peek();
+            if (gameWithBot && previousMove.PlayerMadeMove == BotController.GetPlayerState()) {
+                int whileTrueError = 0;
+                GameSequence previousMoveMadeByBot = new GameSequence();
+                Player botPlayerState = BotController.GetPlayerState();
+                if (botPlayerState == Player.FirstPlayer) {
+                    previousMoveMadeByBot = gameSequence.Peek();
+                    while (previousMoveMadeByBot.PlayerMadeMove == botPlayerState) {
+                        positionWhiteReverse[previousMoveMadeByBot.FromPositionIndex].GetComponent<PositionHandle>().AddChip(chipsWhite[previousMoveMadeByBot.ChipIndex]);
+                        gameSequence.Pop();
+                        movesMade--;
+                        previousMoveMadeByBot = gameSequence.Peek();
+                        whileTrueError++;
+                        if (whileTrueError > 5) {
+                            Debug.LogError("whileTrueError in UndoButton");
+                            return;
+                        }
+                    }
+                    PlayerToMove = Player.SecondPlayer;
+                }
+                else if (botPlayerState == Player.SecondPlayer) {
+                    previousMoveMadeByBot = gameSequence.Peek();
+                    while (previousMoveMadeByBot.PlayerMadeMove == botPlayerState) {
+                        positionBlackReverse[previousMoveMadeByBot.FromPositionIndex].GetComponent<PositionHandle>().AddChip(chipsBlack[previousMoveMadeByBot.ChipIndex]);
+                        gameSequence.Pop();
+                        movesMade--;
+                        previousMoveMadeByBot = gameSequence.Peek();
+                        whileTrueError++;
+                        if (whileTrueError > 5) {
+                            Debug.LogError("whileTrueError in UndoButton");
+                            return;
+                        }
+                    }
+                    PlayerToMove = Player.FirstPlayer;
+                }
+                previousMove = gameSequence.Peek();
+            }
             if (gameRules == GameRules.SetCubes) {
 
                 ChipButtonsDisableBoth();
@@ -1124,22 +1197,7 @@ public class Game : MonoBehaviour {
                     PlayerToMove = Player.SecondPlayer;
                     Invoke(nameof(ChipButtonsEnable), 0.5f);
                 }
-                cubeFirst = previousMove.Cube1;
-                if (cubeFirst >= 1 && cubeFirst <= 6) {
-                    CubeVisual1.SetState((Cube)cubeFirst);
-                    CubeVisual1.gameObject.SetActive(true);
-                }
-                else {
-                    CubeVisual1.gameObject.SetActive(false);
-                }
-                cubeLast = previousMove.Cube2;
-                if (cubeLast >= 1 && cubeLast <= 6) {
-                    CubeVisual2.SetState((Cube)cubeLast);
-                    CubeVisual2.gameObject.SetActive(true);
-                }
-                else {
-                    CubeVisual2.gameObject.SetActive(false);
-                }
+                VisualizeCubesAfterUndo(previousMove.Cube1, previousMove.Cube2);
                 pareIndex = previousMove.PareIndex;
                 tookFromHead = previousMove.TookFromHead;
                 movesMade--;
@@ -1157,22 +1215,7 @@ public class Game : MonoBehaviour {
                     positionBlackReverse[previousMove.FromPositionIndex].GetComponent<PositionHandle>().AddChip(chipsBlack[previousMove.ChipIndex]);
                     PlayerToMove = Player.SecondPlayer;
                 }
-                cubeFirst = previousMove.Cube1;
-                if (cubeFirst >= 1 && cubeFirst <= 6) {
-                    CubeVisual1.SetState((Cube)cubeFirst);
-                    CubeVisual1.gameObject.SetActive(true);
-                }
-                else {
-                    CubeVisual1.gameObject.SetActive(false);
-                }
-                cubeLast = previousMove.Cube2;
-                if (cubeLast >= 1 && cubeLast <= 6) {
-                    CubeVisual2.SetState((Cube)cubeLast);
-                    CubeVisual2.gameObject.SetActive(true);
-                }
-                else {
-                    CubeVisual2.gameObject.SetActive(false);
-                }
+                VisualizeCubesAfterUndo(previousMove.Cube1, previousMove.Cube2);
                 gameSequence.Pop();
             }
             if (!gameSequence.TryPeek(out GameSequence result)) {
@@ -1195,14 +1238,28 @@ public class Game : MonoBehaviour {
         }
     }
 
-    public void SetSelectedCubes(int firstCube, int secondCube) {
+    private void GameSequenceAddMove(Player PlayerMadeMove, int fromPosIndex, int toPosIndex, int cube1, int cube2, int chipIndex) {
+        gameSequence.Push(new GameSequence(PlayerMadeMove, fromPosIndex, toPosIndex, cube1, cube2, chipIndex, pareIndex, tookFromHead));
+    }
 
+    public void SetSelectedCubes(int firstCube, int secondCube) {
         cubeFirst = firstCube;
         cubeLast = secondCube;
         CubeVisual1.SetState((Cube)cubeFirst);
         CubeVisual2.SetState((Cube)cubeLast);
         ActivateCubesVisual();
         EnableSettingButtonInGame();
+        if (gameWithBot && PlayerToMove == BotController.GetPlayerState()) {
+            ChipButtonsDisableBoth();
+            Generator.DisableGameObject();
+            GameSequence[] movesMadeByBot = BotController.BotMadeMoves(firstCube, secondCube);
+            foreach (var move in movesMadeByBot) {
+                GameSequenceAddMove(move.PlayerMadeMove, move.FromPositionIndex, move.ToPositionIndex, move.Cube1, move.Cube2, move.ChipIndex);
+                movesMade++;
+            }
+            Invoke(nameof(ChangePlayerToMove), 1.5f);
+            return;
+        }
         if (cubeFirst == cubeLast) { pareIndex = 4; }
 
         if (gameRules == GameRules.SetCubes) {
@@ -1272,19 +1329,35 @@ public class Game : MonoBehaviour {
         return gameRules;
     }
 
+    public int GetMovesMade() {
+        return movesMade;
+    }
+
     private void Testing() {
-        int range = 0;
-        for (int i = 0; i < chipsCount; i++) {
-            range = UnityEngine.Random.Range(1, 7);
-            positionWhiteReverse[range].GetComponent<PositionHandle>().AddChip(chipsWhite[i]);
-            positionWhiteReverse[range].GetComponent<PositionHandle>().player = Player.FirstPlayer;
-            range = UnityEngine.Random.Range(1, 7);
-            positionBlackReverse[range].GetComponent<PositionHandle>().AddChip(chipsBlack[i]);
-            positionBlackReverse[range].GetComponent<PositionHandle>().player = Player.SecondPlayer;
+        int startIndex = 18;
+        int endIndex = 23;
+        List<PositionHandle> listToReturn = new List<PositionHandle>();
+        if (startIndex > endIndex) {
+            for (int i = startIndex; i > endIndex - 1; i--) {
+                listToReturn.Add(positionWhiteReverse[i].GetComponent<PositionHandle>());
+            }
         }
-        positionWhiteReverse[7].GetComponent<PositionHandle>().AddChip(chipsWhite[1]);
-        positionBlackReverse[7].GetComponent<PositionHandle>().AddChip(chipsBlack[1]);
-        positionBlackReverse[7].GetComponent<PositionHandle>().player = Player.SecondPlayer;
-        positionWhiteReverse[7].GetComponent<PositionHandle>().player = Player.FirstPlayer;
+        else if (endIndex > startIndex) {
+            for (int i = startIndex; i < endIndex + 1; i++) {
+                listToReturn.Add(positionWhiteReverse[i].GetComponent<PositionHandle>());
+            }
+        }
+        for (int i = 0; i < listToReturn.Count; i++) {
+            for (int j = 0; j < listToReturn.Count - 1; j++)
+                if (listToReturn[j].GetChipListCount() > listToReturn[j + 1].GetChipListCount()) {
+                    var position = listToReturn[j];
+                    listToReturn.Remove(position);
+                    listToReturn.Insert(j + 1, position);
+                }
+        }
+        for (int i = 0; i < listToReturn.Count; i++) {
+            Debug.Log("sortedList, ChipCount - " + listToReturn[i].GetChipListCount() + ", position - " + listToReturn[i]);
+        }
+
     }
 }

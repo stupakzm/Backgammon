@@ -63,7 +63,6 @@ public class PositionHandle : PositionBase {
         if (game.currentChip != null && canMove) {
             if (chipsList.Count == 0) {
                 AddChip(game.currentChip);
-                player = game.currentChip.GetPlayerState();
             }
             else if (player == game.currentChip.GetPlayerState()) {
                 AddChip(game.currentChip);
@@ -160,6 +159,9 @@ public class PositionHandle : PositionBase {
 
     public void AddChip(ChipBase chipToAdd) {
         chipToAdd.GetCurrentPosition()?.RemoveChip(chipToAdd);
+        if (chipsList.Count == 0) {
+            player = chipToAdd.GetPlayerState();
+        }
         chipsList.Add(chipToAdd);
         chipToAdd.SetCurrentPosition(this);
         chipToAdd.DeselectChipVisual();
@@ -225,5 +227,9 @@ public class PositionHandle : PositionBase {
 
     public List<ChipBase> GetChipList() {
         return chipsList;
+    }
+
+    public int GetChipListCount() {
+        return chipsList.Count;
     }
 }
