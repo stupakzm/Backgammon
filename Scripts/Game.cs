@@ -24,6 +24,7 @@ public class Game : MonoBehaviour {
     [SerializeField] private Generator Generator;
     [SerializeField] private Transform ChipsParent;
     [SerializeField] private BotController BotController;
+    [SerializeField] private BotController BotController1;
 
     private bool isEnableCubeVisuals = true;//using in method DisableCubeVisuals to make cubes transparent
     private int previousPositionIndex;
@@ -37,6 +38,8 @@ public class Game : MonoBehaviour {
     private bool SettingsButtonDisabled;
     public bool isSimulationOn;
     private bool gameWithBot;
+    private bool gameBotVsBot;
+    private bool botWon = false;
 
     private PositionBase startPosWhite;
     private PositionBase startPosBlack;
@@ -393,6 +396,13 @@ public class Game : MonoBehaviour {
             tookFromHead = false;
             return;
         }
+        else if (gameBotVsBot) {
+            Generator.OnButtonClick();
+            UndoButton.SetActive(false);
+            UndoButtonDisabled = false;
+            SettingsButtonDisabled = false;
+            return;
+        }
         if (GeneratorOnlyInSetCubes) {
             Generator.OnButtonClick();
         }
@@ -449,6 +459,18 @@ public class Game : MonoBehaviour {
         currentChip = null;
     }
 
+    public void BotWonGame(Player winner) {
+        botWon = true;
+        ChipButtonsDisableBoth();
+        positionParent.PositionsDisable();
+        DisableButtonDeseletChip();
+        currentChip = null;
+        SetStartPositions();
+        ResetHomePositions();
+        MainBanner.ActivatePlayerWonMode("Winner player " + ((int)winner + 1));//this banner will have the same game selection as at the start 
+        UndoButton.gameObject.SetActive(false);
+    }
+
     private void PlayerWonGame() {
         Player winner = currentChip.GetPlayerState();
         currentChip = null;
@@ -465,6 +487,7 @@ public class Game : MonoBehaviour {
 
     public void StartLongGameFreeAspect() {//Button
         gameWithBot = false;
+        gameBotVsBot = false;
         gameRules = GameRules.FreeAspect;
         RestartGameHelper();
         ChipButtonsEnableBoth();
@@ -479,6 +502,7 @@ public class Game : MonoBehaviour {
 
     public void StartGameFixedSix() {//Button
         gameWithBot = false;
+        gameBotVsBot = false;
         gameRules = GameRules.FixedSix;
         RestartGameHelper();
         ChipButtonsEnableBoth();
@@ -493,6 +517,7 @@ public class Game : MonoBehaviour {
 
     public void StartGameSetCubes() {//Button
         gameWithBot = false;
+        gameBotVsBot = false;
         RestartGameHelper();
         gameRules = GameRules.SetCubes;
         PlayerToMove = Player.SecondPlayer;
@@ -502,6 +527,7 @@ public class Game : MonoBehaviour {
     }
 
     public void StartGameVsBot() {
+        gameBotVsBot = false;
         gameWithBot = true;
         RestartGameHelper();
         gameRules = GameRules.SetCubes;
@@ -509,7 +535,20 @@ public class Game : MonoBehaviour {
         ChangePlayerToMove();
         Generator.SetCubesPosition();
         movesMade = 0;
+    }
+
+    public void StartGameBotVsBot() {
+        gameWithBot = false;
+        gameBotVsBot = true;
+        gameRules = GameRules.FreeAspect;
+        PlayerToMove = Player.SecondPlayer;
+        RestartGameHelper();
+        movesMade = 0;
+        Generator.SetCubesPosition();
         BotController.SetChips(chipsBlack);
+        BotController1.SetChips(chipsWhite);
+        ChangePlayerToMove();
+
     }
 
     private void RestartGameHelper() {
@@ -1258,6 +1297,24 @@ public class Game : MonoBehaviour {
                 movesMade++;
             }
             Invoke(nameof(ChangePlayerToMove), 1.5f);
+            return;
+        }
+        else if (gameBotVsBot) {
+            ChipButtonsDisableBoth();
+            Generator.DisableGameObject();
+            GameSequence[] movesMadeByBot;
+            if (PlayerToMove == BotController.GetPlayerState()) {
+                movesMadeByBot = BotController.BotMadeMoves(firstCube, secondCube);
+            }
+            else {
+                movesMadeByBot = BotController1.BotMadeMoves(firstCube, secondCube);
+            }
+            foreach (var move in movesMadeByBot) {
+                GameSequenceAddMove(move.PlayerMadeMove, move.FromPositionIndex, move.ToPositionIndex, move.Cube1, move.Cube2, move.ChipIndex);
+                movesMade++;
+            }
+            if (!botWon)
+                Invoke(nameof(ChangePlayerToMove), 1.5f);
             return;
         }
         if (cubeFirst == cubeLast) { pareIndex = 4; }

@@ -4,16 +4,18 @@ using UnityEngine;
 
 public class BotController : MonoBehaviour {
 
-    [SerializeField] private HomePosition homePosition;
     [SerializeField] private Game game;
     [SerializeField] private PositionsParent positionParent;
+    [SerializeField] private int[] testChipIndexesInGame;
 
+    private HomePositionHandler homePosition;
     private int chipsCount;
     private GameSequence bestMove;
     private GameSequence[] movesMade;
     private Player player;
     private bool tookFromHead;
     private bool movesWereMade;
+    private bool botWon = false;
     private int cubeFirst;
     private int cubeLast;
     private int pareIndex = -1;
@@ -22,23 +24,36 @@ public class BotController : MonoBehaviour {
     private int movesMadeCount;
     private PositionStateStruct[] boardState;
     private List<PositionBase> positions;
+    private List<PositionBase> opponentPositions;
     private List<ChipBase> chipList;
     private List<int> chipIndexesInGame;
+
+    private void TestAsignActiveIndexes() {
+        testChipIndexesInGame = new int[chipIndexesInGame.Count];
+        for (int i = 0; i < chipIndexesInGame.Count; i++) {
+            testChipIndexesInGame[i] = chipIndexesInGame[i];
+        }
+    }
+
 
     public void GameStarted(int side) {//0 - white, 1 - black
         chipIndexesInGame = new List<int>();
         positions = new List<PositionBase>();
         if (side == 0) {
             positions = positionParent.GetPositionWhite();
+            opponentPositions = positionParent.GetPositionBlack();
         }
         else {
             positions = positionParent.GetPositionBlack();
+            opponentPositions = positionParent.GetPositionWhite();
         }
+        homePosition = positions[0].GetComponent<HomePositionHandler>();
         player = (Player)side;
     }
 
     private void AsignBoardState() {
         boardState = new PositionStateStruct[25];
+        boardState[0].playerState = Player.Empty;
         for (int i = 1; i < boardState.Length; i++) {
             boardState[i].positionIndex = i;
             boardState[i].playerState = positions[i].player;
@@ -55,15 +70,21 @@ public class BotController : MonoBehaviour {
         cubeLast = cube2;
         if (cubeFirst == cubeLast) {
             pareIndex = 4;
-            movesMade = new GameSequence[4];
+            movesMade = new GameSequence[4];//need to add one by one when move are made, couse there can be situation where is no move
         }
         else {
             movesMade = new GameSequence[2];
         }
         while (!movesWereMade) {
             TurnToMove();
+            if (botWon) {
+                movesWereMade = true;
+                Debug.Log("Bot Won. no more moves");
+                game.BotWonGame(player);
+                return movesMade;
+            }
             whileTrueHandle++;
-            if (whileTrueHandle >= 4) {
+            if (whileTrueHandle >= 5) {
                 movesWereMade = true;
                 Debug.Log("ERROR while true!");
             }
@@ -77,15 +98,18 @@ public class BotController : MonoBehaviour {
         //get cubes from game
         try {
             if (FindBestMove(out int cube)) {
-                MakeMove(cube, -1);
+                if (cube != 0)
+                    MakeMove(cube, -1);
             }
             else {
-                MakeMove(cube, realPositionIndex);
+                if(realPositionIndex != -1 && chipIndexToMove != -1)
+                    MakeMove(cube, realPositionIndex);
             }
         }
         catch (Exception ex) {
             Debug.LogError(ex);
         }
+        TestAsignActiveIndexes();
         if (cubeFirst == 0 && cubeLast == 0) {
             movesWereMade = true;
         }
@@ -134,15 +158,17 @@ public class BotController : MonoBehaviour {
             }
         }
         else {//no chips in head
-            if (HaveingChipAtPositions(23, 19)) {
+            if (HaveingChipAtPositions(23, 19)) {//need to resort methodes
                 //move from op1-5 to home to empty -> to self, if no -> move from opHome to next side but not open pos for op, if no -> move from self 1-5 frwd
                 cube = FindCubeToMoveToSelfHomePosEmpty();
                 if (cube != -1) return true;
+                cube = FindCubeToMoveBlockingOpHome();
+                if (cube != -1) return true;
                 cube = FindCubeToMoveToSelfHomePosSelf();
                 if (cube != -1) return true;
-                cube = FindCubeToMoveFromOpHomeConditionNotOpenOpHome(true);
+                cube = FindCubeToMoveBlockingOpHome(false);
                 if (cube != -1) return true;
-                cube = FindCubeToMoveBlockingOpHome();
+                cube = FindCubeToMoveFromOpHomeConditionNotOpenOpHome(true);
                 if (cube != -1) return true;
             }
             else if (HaveingChipAtPositions(18, 13)) {
@@ -177,7 +203,7 @@ public class BotController : MonoBehaviour {
         if (cube != -1) return true;
         cube = FindCubeNoConditionToEmpty();
         if (cube != -1) return true;
-        Debug.LogError("bot could not find move!");
+        //Debug.LogError("bot could not find move!");
         cube = 0;
         return true;
     }
@@ -297,13 +323,25 @@ public class BotController : MonoBehaviour {
             PositionHandle currentPosition = positions[i].GetComponent<PositionHandle>();
             if (currentPosition.player != player) continue;
             if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {
-                if (positions[i - cubeFirst].player == Player.Empty) {
+                if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeFirst;
                 }
             }
             else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {
-                if (positions[i - cubeLast].player == Player.Empty) {
+                if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeLast;
                 }
@@ -329,6 +367,18 @@ public class BotController : MonoBehaviour {
                     return cubeLast;
                 }
             }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
         }
         return -1;
     }
@@ -339,13 +389,25 @@ public class BotController : MonoBehaviour {
             PositionHandle currentPosition = positions[i].GetComponent<PositionHandle>();
             if (currentPosition.player != player) continue;
             if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {
-                if (positions[i - cubeFirst].player == player || positions[i - cubeFirst].player == Player.Empty) {
+                if (positions[i - cubeFirst].player == player || (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i-cubeFirst))) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeFirst;
                 }
             }
             else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {
-                if (positions[i - cubeLast].player == player || positions[i - cubeLast].player == Player.Empty) {
+                if (positions[i - cubeLast].player == player || (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast))) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == player || (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst))) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == player || (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast))) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeLast;
                 }
@@ -362,13 +424,25 @@ public class BotController : MonoBehaviour {
             if (currentPosition.player != player) continue;
             if (condition && currentPosition.GetChipListCount() == 1 && i >= 19) continue;
             if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {
-                if (positions[i - cubeFirst].player == Player.Empty) {
+                if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeFirst;
                 }
             }
             else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {
-                if (positions[i - cubeLast].player == Player.Empty) {
+                if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeLast;
                 }
@@ -386,6 +460,18 @@ public class BotController : MonoBehaviour {
                     return cubeLast;
                 }
             }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
         }
         return -1;
     }
@@ -398,12 +484,24 @@ public class BotController : MonoBehaviour {
             if (currentPosition.player != player) continue;
             if (condition && currentPosition.GetChipListCount() == 1) continue;
             if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {
-                if (positions[i - cubeFirst].player == Player.Empty | positions[i - cubeFirst].player == player) {
+                if ((positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) | positions[i - cubeFirst].player == player) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeFirst;
                 }
             }
             else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {
+                if (positions[i - cubeLast].player == Player.Empty | positions[i - cubeLast].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if (positions[i - cubeFirst].player == Player.Empty | positions[i - cubeFirst].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
                 if (positions[i - cubeLast].player == Player.Empty | positions[i - cubeLast].player == player) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeLast;
@@ -416,18 +514,30 @@ public class BotController : MonoBehaviour {
     private int FindCubeToMoveBlockingOpHome(bool condition = true) {//condition is to not open pos
         Debug.Log("Inside FindCubeToMoveBlockingOpHome M, condition " + condition);
         //looking from pos19 to 23 to make move in empty or self
-        for (int i = 19; i < 24; i++) {
+        for (int i = 23; i >= 19; i--) {
             PositionHandle currentPosition = positions[i].GetComponent<PositionHandle>();
             if (currentPosition.player != player) continue;
             if (condition && currentPosition.GetChipListCount() == 1) continue;
             if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {
-                if (positions[i - cubeFirst].player == Player.Empty | positions[i - cubeFirst].player == player) {
+                if ((positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) | positions[i - cubeFirst].player == player) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeFirst;
                 }
             }
             else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {
-                if (positions[i - cubeLast].player == Player.Empty | positions[i - cubeLast].player == player) {
+                if ((positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) | positions[i - cubeLast].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeLast;
+                }
+            }
+            if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {
+                if ((positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i-cubeFirst)) | positions[i - cubeFirst].player == player) {
+                    chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
+                    return cubeFirst;
+                }
+            }
+            else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {
+                if ((positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i-cubeLast)) | positions[i - cubeLast].player == player) {
                     chipIndexToMove = chipList.IndexOf(currentPosition.GetChipList()[0]);
                     return cubeLast;
                 }
@@ -439,24 +549,27 @@ public class BotController : MonoBehaviour {
     private int FindCubeToMoveFromHeadToSelf() {
         Debug.Log("Inside FindCubeToMoveFromHeadToSelf M");
         List<ChipBase> chipListAtHead = positions[24].GetComponent<PositionHandle>().GetChipList();
+        int chipPositionIndex = positions.IndexOf(chipListAtHead[0].GetCurrentPosition());
+        int indexOfChip = chipList.IndexOf(chipListAtHead[0]);
         if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
-            if (positions[positions.IndexOf(chipListAtHead[0].GetCurrentPosition()) - cubeFirst].player == player) {
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeFirst, indexOfChip, player)) {
                 //need to check barrier rule [blocking 6 pos in a row]
-                tookFromHead = true;
-                if (!chipIndexesInGame.Contains(chipList.IndexOf(chipListAtHead[0]))) {
-                    chipIndexesInGame.Add(chipList.IndexOf(chipListAtHead[0]));
-                }
-                chipIndexToMove = chipList.IndexOf(chipListAtHead[0]);
                 return cubeFirst;
             }
         }
         else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
-            if (positions[positions.IndexOf(chipListAtHead[0].GetCurrentPosition()) - cubeLast].player == player) {
-                tookFromHead = true;
-                if (!chipIndexesInGame.Contains(chipList.IndexOf(chipListAtHead[0]))) {
-                    chipIndexesInGame.Add(chipList.IndexOf(chipListAtHead[0]));
-                }
-                chipIndexToMove = chipList.IndexOf(chipListAtHead[0]);
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeLast, indexOfChip, player)) {
+                return cubeLast;
+            }
+        }
+        if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeFirst, indexOfChip, player)) {
+                //need to check barrier rule [blocking 6 pos in a row]
+                return cubeFirst;
+            }
+        }
+        else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeLast, indexOfChip, player)) {
                 return cubeLast;
             }
         }
@@ -467,42 +580,71 @@ public class BotController : MonoBehaviour {
     private int FindCubeToMoveFromHeadToEmpty() {
         Debug.Log("Inside FindCubeToMoveFromHeadToEmpty M");
         List<ChipBase> chipListAtHead = positions[24].GetComponent<PositionHandle>().GetChipList();
+        int chipPositionIndex = positions.IndexOf(chipListAtHead[0].GetCurrentPosition());
+        int indexOfChip = chipList.IndexOf(chipListAtHead[0]);
         if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
-            if (positions[positions.IndexOf(chipListAtHead[0].GetCurrentPosition()) - cubeFirst].player == Player.Empty) {
-                //need to check barrier rule [blocking 6 pos in a row]
-                tookFromHead = true;
-                if (!chipIndexesInGame.Contains(chipList.IndexOf(chipListAtHead[0]))) {
-                    chipIndexesInGame.Add(chipList.IndexOf(chipListAtHead[0]));
-                }
-                chipIndexToMove = chipList.IndexOf(chipListAtHead[0]);
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeFirst, indexOfChip, Player.Empty) && IsSafeBarrierRule(chipPositionIndex, chipPositionIndex - cubeFirst)) {
                 return cubeFirst;
             }
         }
         else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
-            if (positions[positions.IndexOf(chipListAtHead[0].GetCurrentPosition()) - cubeLast].player == Player.Empty) {
-                tookFromHead = true;
-                if (!chipIndexesInGame.Contains(chipList.IndexOf(chipListAtHead[0]))) {
-                    chipIndexesInGame.Add(chipList.IndexOf(chipListAtHead[0]));
-                }
-                chipIndexToMove = chipList.IndexOf(chipListAtHead[0]);
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeLast, indexOfChip, Player.Empty) && IsSafeBarrierRule(chipPositionIndex, chipPositionIndex-cubeLast)) {
+                return cubeLast;
+            }
+        }
+        if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeFirst, indexOfChip, Player.Empty) && IsSafeBarrierRule(chipPositionIndex, chipPositionIndex-cubeFirst)) {
+                return cubeFirst;
+            }
+        }
+        else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+            if (FindCubeToMoveFromHeadHelper(chipPositionIndex - cubeLast, indexOfChip, Player.Empty) && IsSafeBarrierRule(chipPositionIndex, chipPositionIndex-cubeLast)) {
                 return cubeLast;
             }
         }
         return -1;
     }
 
+    private bool FindCubeToMoveFromHeadHelper(int positionIndex, int indexOfChip, Player player) {
+        if (positions[positionIndex].player == player) {
+            //need to check barrier rule [blocking 6 pos in a row]
+            tookFromHead = true;
+            if (!chipIndexesInGame.Contains(indexOfChip)) {
+                chipIndexesInGame.Add(indexOfChip);
+            }
+            chipIndexToMove = indexOfChip;
+            return true;
+        }
+        return false;
+    }
+
     private int FindCubeNoConditionToSelf() {
         Debug.Log("Inside FindCubeNoConditionToSelf M");
         if (tookFromHead) {
             for (int i = 0; i < chipIndexesInGame.Count - 1; i++) {
+                int indexToMoveFirstCube = positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeFirst;
+                int indexToMoveSecondCube = positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeLast;
+                if(indexToMoveFirstCube < 0 || indexToMoveSecondCube <0) { continue; }
                 if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
-                    if (positions[positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeFirst].player == player) {
+                    if (positions[indexToMoveFirstCube].player == player) {
                         chipIndexToMove = chipIndexesInGame[i];
                         return cubeFirst;
                     }
                 }
                 else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
-                    if (positions[positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeLast].player == player) {
+                    if (positions[indexToMoveSecondCube].player == player) {
+                        chipIndexToMove = chipIndexesInGame[i];
+                        return cubeLast;
+                    }
+                }
+                if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+                    if (positions[indexToMoveFirstCube].player == player) {
+                        chipIndexToMove = chipIndexesInGame[i];
+                        return cubeFirst;
+                    }
+                }
+                else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+                    if (positions[indexToMoveSecondCube].player == player) {
                         chipIndexToMove = chipIndexesInGame[i];
                         return cubeLast;
                     }
@@ -513,13 +655,31 @@ public class BotController : MonoBehaviour {
         for (int i = boardState.Length - 1; i > 0; i--) {
             if (boardState[i].playerState == player) {
                 if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
+                    if ((i - cubeFirst) <= 0) continue;
                     if (positions[i - cubeFirst].player == player) {
                         chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
                         return cubeFirst;
                     }
                 }
                 else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
+                    if ((i - cubeLast) <= 0) continue;
                     if (positions[i - cubeLast].player == player) {
+                        //chip in homeposition and cube is bigger and other chis not in home just skip
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        return cubeLast;
+                    }
+                }
+                if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+                    if ((i - cubeFirst) <= 0) continue;
+                    if (positions[i - cubeFirst].player == player) {
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        return cubeFirst;
+                    }
+                }
+                else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+                    if ((i - cubeLast) <= 0) continue;
+                    if (positions[i - cubeLast].player == player) {
+                        //chip in homeposition and cube is bigger and other chis not in home just skip
                         chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
                         return cubeLast;
                     }
@@ -532,14 +692,29 @@ public class BotController : MonoBehaviour {
         Debug.Log("Indside FindCubeNoConditionToEmpty M");
         if (tookFromHead) {
             for (int i = 0; i < chipIndexesInGame.Count - 1; i++) {
+                int indexToMoveFirstCube = positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeFirst;
+                int indexToMoveSecondCube = positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeLast;
+                if (indexToMoveFirstCube < 0 || indexToMoveSecondCube < 0) { continue; }
                 if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
-                    if (positions[positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeFirst].player == Player.Empty) {
+                    if (positions[indexToMoveFirstCube].player == Player.Empty && IsSafeBarrierRule(i, indexToMoveFirstCube)) {
                         chipIndexToMove = chipIndexesInGame[i];
                         return cubeFirst;
                     }
                 }
                 else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
-                    if (positions[positions.IndexOf(chipList[chipIndexesInGame[i]].GetCurrentPosition()) - cubeLast].player == Player.Empty) {
+                    if (positions[indexToMoveSecondCube].player == Player.Empty && IsSafeBarrierRule(i, indexToMoveSecondCube)) {
+                        chipIndexToMove = chipIndexesInGame[i];
+                        return cubeLast;
+                    }
+                }
+                if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+                    if (positions[indexToMoveFirstCube].player == Player.Empty && IsSafeBarrierRule(i, indexToMoveFirstCube)) {
+                        chipIndexToMove = chipIndexesInGame[i];
+                        return cubeFirst;
+                    }
+                }
+                else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+                    if (positions[indexToMoveSecondCube].player == Player.Empty && IsSafeBarrierRule(i, indexToMoveSecondCube)) {
                         chipIndexToMove = chipIndexesInGame[i];
                         return cubeLast;
                     }
@@ -550,13 +725,29 @@ public class BotController : MonoBehaviour {
         for (int i = boardState.Length - 1; i > 0; i--) {
             if (boardState[i].playerState == player) {
                 if ((cubeFirst != 0 && cubeFirst <= cubeLast) | cubeLast == 0) {//cube1 less than cube2
-                    if (positions[i - cubeFirst].player == Player.Empty) {
+                    if ((i - cubeFirst) <= 0) continue;
+                    if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i-cubeFirst)) {
                         chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
                         return cubeFirst;
                     }
                 }
                 else if ((cubeLast != 0 && cubeLast < cubeFirst) | cubeFirst == 0) {//cube2 less than cube1
-                    if (positions[i - cubeLast].player == Player.Empty) {
+                    if ((i - cubeLast) <= 0) continue;
+                    if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        return cubeLast;
+                    }
+                }
+                if ((cubeFirst != 0 && cubeFirst >= cubeLast) | cubeLast == 0) {//cube1 bigger than cube2
+                    if ((i - cubeFirst) <= 0) continue;
+                    if (positions[i - cubeFirst].player == Player.Empty && IsSafeBarrierRule(i, i - cubeFirst)) {
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        return cubeFirst;
+                    }
+                }
+                else if ((cubeLast != 0 && cubeLast > cubeFirst) | cubeFirst == 0) {//cube2 bigger than cube1
+                    if ((i - cubeLast) <= 0) continue;
+                    if (positions[i - cubeLast].player == Player.Empty && IsSafeBarrierRule(i, i - cubeLast)) {
                         chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
                         return cubeLast;
                     }
@@ -567,6 +758,8 @@ public class BotController : MonoBehaviour {
     }
 
     private int FindCubeToMoveInHome() {
+        realPositionIndex = -1;
+        chipIndexToMove = -1;
         Debug.Log("Inside FindCubeToMoveInHome M");
         if (boardState[cubeFirst].playerState == player) {
             chipIndexToMove = chipList.IndexOf(positions[cubeFirst].GetComponent<PositionHandle>().GetChipList()[0]);
@@ -582,15 +775,18 @@ public class BotController : MonoBehaviour {
             if (HaveingChipsAtBiggerPositionsInHome(cubeFirst)) {
                 //have chips at bigger, than need to move normal
                 for (int i = 6; i >= cubeFirst; i--) {
-                    if (boardState[i].playerState == player) {
-                        chipIndexToMove = chipList.IndexOf(positions[cubeFirst].GetComponent<PositionHandle>().GetChipList()[0]);
-                        realPositionIndex = cubeFirst;
+                    if (boardState[i].playerState == player && (boardState[i-cubeFirst].playerState == player || boardState[i - cubeFirst].playerState == Player.Empty)) {
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        realPositionIndex = i;
                         return cubeFirst;
                     }
                 }
             }
             else {
                 realPositionIndex = GetPositionIndexToMoveWithBiggerCube(cubeFirst);
+                if (realPositionIndex == -1) {
+                    return -1;
+                }
                 chipIndexToMove = chipList.IndexOf(positions[realPositionIndex].GetComponent<PositionHandle>().GetChipList()[0]);
                 return cubeFirst;
             }
@@ -599,15 +795,18 @@ public class BotController : MonoBehaviour {
             if (HaveingChipsAtBiggerPositionsInHome(cubeLast)) {
                 //have chips at bigger, than need to move normal
                 for (int i = 6; i >= cubeLast; i--) {
-                    if (boardState[i].playerState == player) {
-                        chipIndexToMove = chipList.IndexOf(positions[cubeLast].GetComponent<PositionHandle>().GetChipList()[0]);
-                        realPositionIndex = cubeLast;
+                    if (boardState[i].playerState == player && (boardState[i - cubeLast].playerState == player || boardState[i - cubeLast].playerState == Player.Empty)) {
+                        chipIndexToMove = chipList.IndexOf(positions[i].GetComponent<PositionHandle>().GetChipList()[0]);
+                        realPositionIndex = i;
                         return cubeLast;
                     }
                 }
             }
             else {
                 realPositionIndex = GetPositionIndexToMoveWithBiggerCube(cubeLast);
+                if (realPositionIndex == -1) {
+                    return -1;
+                }
                 chipIndexToMove = chipList.IndexOf(positions[realPositionIndex].GetComponent<PositionHandle>().GetChipList()[0]);
                 return cubeLast;
             }
@@ -636,12 +835,53 @@ public class BotController : MonoBehaviour {
         return false;
     }
 
+    private bool IsSafeBarrierRule(int from, int to) {//a rule that does not allow closing all positions from which you can enter the "home"
+        int barrierSequence = 0;
+        bool isSafe = true;
+
+        for (int j = positions.Count - 1; j > 0; j--) {//Count - 1 because home included
+            if (positions[j].player == player && j == from && positions[j].GetComponent<PositionHandle>().GetChipListCount() == 1) {//last chip so position will be open
+                barrierSequence = 0;
+               // Debug.Log("M IsSafeBarrierRule - last chip so position will be open");
+                continue;
+            }
+            if (positions[j].player == player || (positions[j].player == Player.Empty && to == j)) {//check whether it is already occupied or will be occupied
+                barrierSequence++;
+            }
+            else {
+                barrierSequence = 0;
+            }
+            if (barrierSequence >= 6) {
+                bool isBarrier = true;
+                Debug.Log("Barrier Rule! botC");
+                for (int k = opponentPositions.IndexOf(positions[j]); k > 0; k--) {//checking if there is an opponent's chip in front of the barrier
+                    if (opponentPositions[k].player == (player == Player.FirstPlayer ? Player.SecondPlayer : Player.FirstPlayer)) {
+                        isBarrier = false;
+                        Debug.Log($"Found chip after opponentPosition - {opponentPositions[k]}.");
+                    }
+                }
+                if (isBarrier) {
+                    isSafe = false;
+                    return isSafe;
+                }
+            }
+        }
+
+        return isSafe;
+    }
+
     private void MakeMove(int cube, int positionIndex) {
         movesMade[movesMadeCount].Cube1 = cubeFirst;
         movesMade[movesMadeCount].Cube2 = cubeLast;
         movesMade[movesMadeCount].PlayerMadeMove = player;
-        movesMade[movesMadeCount].FromPositionIndex = positions.IndexOf(chipList[chipIndexToMove].GetCurrentPosition());
-        movesMade[movesMadeCount].ToPositionIndex = positions.IndexOf(chipList[chipIndexToMove].GetCurrentPosition()) - cube;
+        if (positionIndex == -1) {
+            movesMade[movesMadeCount].ToPositionIndex = positions.IndexOf(chipList[chipIndexToMove].GetCurrentPosition()) - cube;
+            movesMade[movesMadeCount].FromPositionIndex = positions.IndexOf(chipList[chipIndexToMove].GetCurrentPosition());
+        }
+        else {
+            movesMade[movesMadeCount].ToPositionIndex = positionIndex - cube;
+            movesMade[movesMadeCount].FromPositionIndex = positionIndex;
+        }
         movesMade[movesMadeCount].ChipIndex = chipIndexToMove;
         if (cubeFirst == cubeLast) {
             pareIndex--;
@@ -656,19 +896,36 @@ public class BotController : MonoBehaviour {
         else if (cube == cubeLast) {
             cubeLast = 0;
         }
-        Debug.Log("chipIndexToMove - " + chipIndexToMove);
         try {
             if (positionIndex == -1) {
                 var currentPosition = positions[positions.IndexOf(chipList[chipIndexToMove].GetCurrentPosition()) - cube];
-                currentPosition.GetComponent<PositionHandle>().AddChip(chipList[chipIndexToMove]);
+               // currentPosition.GetComponent<PositionHandle>().AddChip(chipList[chipIndexToMove]);
+                if (currentPosition.TryGetComponent(out PositionHandle position)) {
+                    position.AddChip(chipList[chipIndexToMove]);
+                }
+                else {
+                    Debug.LogError($"chipIndexToMove - {chipIndexToMove}, cube - {cube}");
+                }
             }
             else {
-                var currentPosition = positions[positionIndex];
-                currentPosition.GetComponent<PositionHandle>().AddChip(chipList[chipIndexToMove]);
+                if ((positionIndex - cube) < 0) {
+                    var currentPosition = positions[0];
+                    botWon = currentPosition.GetComponent<HomePositionHandler>().AddChipToHomeWin(chipList[chipIndexToMove]);
+                    //tell gameController that bot Wins
+                }
+                else if ((positionIndex - cube) == 0) {
+                    var currentPosition = positions[positionIndex - cube];
+                    botWon = currentPosition.GetComponent<HomePositionHandler>().AddChipToHomeWin(chipList[chipIndexToMove]);
+                    //tell gameController that bot Wins
+                }
+                else {
+                    var currentPosition = positions[positionIndex - cube];
+                    currentPosition.GetComponent<PositionHandle>().AddChip(chipList[chipIndexToMove]);
+                }
             }
         }
         catch (Exception ex) {
-            Debug.LogException(ex);
+            Debug.LogError(ex);
         }
         movesMadeCount++;
     }
