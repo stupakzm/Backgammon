@@ -8,7 +8,7 @@ This repository contains the code for my upcoming Nardi (Backgammon) game.
 The primary aim of this project is to offer a versatile Nardi gaming experience that can be enjoyed anytime and anywhere.
 
 #Features
-- The game offers three possible modes (the functioning of which can be viewed in the game itself, it is implemented using Coroutine and has a short description):
+- The game offers possibility to play against botand three modes for play on one device (the functioning of which can be viewed in the game itself, it is implemented using Coroutine and has a short description):
   1. **FreeAspect:** This mode is designed for players who trust each other completely. In this mode, all positions are open, and you can use either your own dice or generate them within the game.
   
   2. **Fixed 6:** Similar to the Trust Mode, but limited to moves of up to 6 positions forward.
@@ -49,4 +49,4 @@ In the game it is also possible to undo the move if the player accidentally clic
 
 
 #Future Plans
-- Future enhancements include adding play mode vs machine and ability to play with some one on 2 devices via bluetooth or WiFi.
+- Future enhancements include adding correct scaling for about modes view for every device and ability to play with someone on 2 devices via bluetooth or WiFi.
