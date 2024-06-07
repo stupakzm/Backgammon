@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using System;
 using TMPro;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 public class Game : MonoBehaviour {
 
@@ -23,8 +24,8 @@ public class Game : MonoBehaviour {
     [SerializeField] private CubeSelected CubeVisual2;
     [SerializeField] private Generator Generator;
     [SerializeField] private Transform ChipsParent;
-    [SerializeField] private BotController BotController;
-    [SerializeField] private BotController BotController1;
+    [SerializeField] private BackgammonDecisionSystem BotController;
+    [SerializeField] private BackgammonDecisionSystem BotController1;
 
     private bool isEnableCubeVisuals = true;//using in method DisableCubeVisuals to make cubes transparent
     private int previousPositionIndex;
@@ -534,6 +535,7 @@ public class Game : MonoBehaviour {
         PlayerToMove = Player.SecondPlayer;
         ChangePlayerToMove();
         Generator.SetCubesPosition();
+        BotController.SetChips(chipsBlack);
         movesMade = 0;
     }
 
@@ -718,7 +720,7 @@ public class Game : MonoBehaviour {
             for (int i = 0; i < pareIndex; i++) {
                 if (PlayerToMove == Player.FirstPlayer) {
                     if ((currentPositionIndex - (cube1 * (i + 1))) > 0) {
-                        if (positionWhiteReverse[currentPositionIndex - (cube1 * (i + 1))].player != Player.SecondPlayer) {
+                        if ((currentPositionIndex - (cube1 * (i + 1))) >= 0 && positionWhiteReverse[currentPositionIndex - (cube1 * (i + 1))].player != Player.SecondPlayer) {
                             posibleIndexes.Add(currentPositionIndex - (cube1 * (i + 1)));
                         }
                         else break;
@@ -888,7 +890,7 @@ public class Game : MonoBehaviour {
                 int currentPositionIndex = positionWhiteReverse.IndexOf(chipsWhite[i].GetCurrentPosition());
                 if ((currentPositionIndex - indexToCheck) <= 0 && allInLastWhite) return true;
                 if ((currentPositionIndex - indexToCheck) < 0) continue;
-                if (positionWhiteReverse[currentPositionIndex - indexToCheck].player != Player.SecondPlayer)
+                if ((currentPositionIndex - indexToCheck) >= 0 && positionWhiteReverse[currentPositionIndex - indexToCheck].player != Player.SecondPlayer)
                     return true;
             }
         else
@@ -1053,19 +1055,19 @@ public class Game : MonoBehaviour {
         int currentPositionIndex = positionWhiteReverse.IndexOf(currentChip.GetCurrentPosition());
         if (isPareCubes) {
             if ((currentPositionIndex - cube1) > 0) {
-                if (positionWhiteReverse[currentPositionIndex - cube1].player != Player.SecondPlayer) {
+                if ((currentPositionIndex - cube1) >= 0 && positionWhiteReverse[currentPositionIndex - cube1].player != Player.SecondPlayer) {
                     listToReturn.Add(positionWhiteReverse[currentPositionIndex - cube1]);
                     positionWhiteReverse[currentPositionIndex - cube1].VisualizePosition();
                 }
-                if (positionWhiteReverse[currentPositionIndex - (cube1 * 2)].player != Player.SecondPlayer) {
+                if ((currentPositionIndex - (cube1 * 2)) >= 0 && positionWhiteReverse[currentPositionIndex - (cube1 * 2)].player != Player.SecondPlayer) {
                     listToReturn.Add(positionWhiteReverse[currentPositionIndex - (cube1 * 2)]);
                     positionWhiteReverse[currentPositionIndex - (cube1 * 2)].VisualizePosition();
                 }
-                if (positionWhiteReverse[currentPositionIndex - (cube1 * 3)].player != Player.SecondPlayer) {
+                if ((currentPositionIndex - (cube1 * 3)) >= 0 && positionWhiteReverse[currentPositionIndex - (cube1 * 3)].player != Player.SecondPlayer) {
                     listToReturn.Add(positionWhiteReverse[currentPositionIndex - (cube1 * 3)]);
                     positionWhiteReverse[currentPositionIndex - (cube1 * 3)].VisualizePosition();
                 }
-                if (positionWhiteReverse[currentPositionIndex - (cube1 * 4)].player != Player.SecondPlayer) {
+                if ((currentPositionIndex - (cube1 * 4)) >= 0 && positionWhiteReverse[currentPositionIndex - (cube1 * 4)].player != Player.SecondPlayer) {
                     listToReturn.Add(positionWhiteReverse[currentPositionIndex - (cube1 * 4)]);
                     positionWhiteReverse[currentPositionIndex - (cube1 * 4)].VisualizePosition();
                 }
@@ -1292,6 +1294,7 @@ public class Game : MonoBehaviour {
             ChipButtonsDisableBoth();
             Generator.DisableGameObject();
             GameSequence[] movesMadeByBot = BotController.BotMadeMoves(firstCube, secondCube);
+            SoundManager.PlaySoundOnce(Sound.ChipMove);
             foreach (var move in movesMadeByBot) {
                 GameSequenceAddMove(move.PlayerMadeMove, move.FromPositionIndex, move.ToPositionIndex, move.Cube1, move.Cube2, move.ChipIndex);
                 movesMade++;
@@ -1309,10 +1312,12 @@ public class Game : MonoBehaviour {
             else {
                 movesMadeByBot = BotController1.BotMadeMoves(firstCube, secondCube);
             }
-            foreach (var move in movesMadeByBot) {
-                GameSequenceAddMove(move.PlayerMadeMove, move.FromPositionIndex, move.ToPositionIndex, move.Cube1, move.Cube2, move.ChipIndex);
-                movesMade++;
-            }
+            SoundManager.PlaySoundOnce(Sound.ChipMove);
+            if (movesMadeByBot != null)
+                foreach (var move in movesMadeByBot) {
+                    GameSequenceAddMove(move.PlayerMadeMove, move.FromPositionIndex, move.ToPositionIndex, move.Cube1, move.Cube2, move.ChipIndex);
+                    movesMade++;
+                }
             if (!botWon)
                 Invoke(nameof(ChangePlayerToMove), 1.5f);
             return;
