@@ -3,6 +3,7 @@
 
 This repository contains the code for my upcoming Nardi (Backgammon) game.
 
+If you are interested, you can try to play the game at https://stupak.itch.io/backgammon
 
 #Project Objective
 The primary aim of this project is to offer a versatile Nardi gaming experience that can be enjoyed anytime and anywhere.
